@@ -70,7 +70,7 @@ function canSpendP2SH () {
 }
 
 function isRecoverySupported () {
-  return !LedgerHWWallet.currentDevice.isNanoS;
+  return !LedgerHWWallet.currentDevice.isNanoS && !LedgerHWWallet.currentDevice.isNanoBlue;
 }
 
 function pingDevice (device) {
@@ -78,7 +78,7 @@ function pingDevice (device) {
   return device.getFirmwareVersion_async().then(function (version) {
     var features = {};
     var firmwareVersion = version.firmwareVersion.bytes(0, 4);
-    if ((device.isNanoS && firmwareVersion.toString(HEX) < '30010109') || firmwareVersion.toString(HEX) < '20010004') {
+    if ((device.isNanoS && firmwareVersion.toString(HEX) < '30010109') || (device.isNanoBlue && firmwareVersion.toString(HEX) < '30010108') || firmwareVersion.toString(HEX) < '20010004') {
       device.card.disconnect_async();
       return Promise.reject('Please upgrade your hardware wallet to the latest firmware and ensure you have your mnemonics backed up.');
     }
@@ -129,9 +129,10 @@ function listDevices (network, options) {
 function openDevice (network, options, device) {
   if (options.cordova) {
     return pingDevice(device).then(function () {  // populate features
-      return device.getVendorId();
-    }).then(function (vendorId) {
-      device.isNanoS = vendorId === 0x2c97;
+      return [device.getVendorId(), device.getProductId()];
+    }).then(function (deviceProperties) {
+      device.isNanoS = deviceProperties[0] === 0x2c97 && deviceProperties[1] === 0x0001;
+      device.isNanoBlue = deviceProperties[0] === 0x2c97 && deviceProperties[1] === 0x0000;
       return device;
     }).catch(function (err) {
       HWWallet.guiCallbacks.ledgerDoErrorNotice(err);
@@ -140,7 +141,8 @@ function openDevice (network, options, device) {
   }
   return cardFactory.getCardTerminal(device).getCard_async().then(function (dongle) {
     var ret = new BTChip(dongle);
-    ret.isNanoS = device.device.vendorId === 0x2c97;
+    ret.isNanoS = device.device.vendorId === 0x2c97 && device.device.productId === 0x0001;
+    ret.isNanoBlue = device.device.vendorId === 0x2c97 && device.device.productId === 0x0000;
     return pingDevice(ret).then(function () {  // populate features
       return ret;
     }).catch(function (err) {
