@@ -442,7 +442,7 @@ var BTChip = module.exports = Class.create({
                           data = data.concat(new ByteString(valueBuf.toString('hex'), HEX));
                         }
 
-                        var scriptBytes = new ByteString(input.script.toString('hex'), HEX);
+                        var scriptBytes = currentObject.reverseBytestring(new ByteString(input.script.toString('hex'), HEX));
                         data = data.concat(currentObject.createVarint(scriptBytes.length));
                         currentObject.startUntrustedHashTransactionInputRaw_async(false, false, data).then(function(result) {
                           var seqBuf = new Buffer(4);
